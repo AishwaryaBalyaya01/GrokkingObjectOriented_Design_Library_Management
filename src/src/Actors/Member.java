@@ -10,15 +10,19 @@ import Models.Person;
 import Models.ReservationStatus;
 
 import java.time.DateTimeException;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class Member extends Account{
     private int totalBooks;
     private Date membershipDate;
+    private static List<Member> members = new ArrayList<>();
 
     public Member(int id, String password, String status, Person person) {
         super(id, password, status, person);
         this.membershipDate = new java.sql.Date(System.currentTimeMillis());
+        Member.members.add(this);
     }
     public void incrementBooksCount(){
         totalBooks++;
@@ -33,34 +37,39 @@ public class Member extends Account{
             System.out.println("User already maxed out");
             return false;
         }
-        BookReservation bookReservation = BookReservation.fetchReservationDetails(bookItem.getBarcode());
-        if(bookReservation!=null && bookReservation.getMember_id()!=this.getId()) {
-            System.out.println("This book is reserved by someone else");
+        if(bookItem.isReferenceOnly()){
+            System.out.println(bookItem.getTitle()+" is for reference only");
             return false;
         }
-        if(bookReservation!=null){
+        BookReservation bookReservation = BookReservation.fetchReservationDetails(bookItem.getBarcode());
+        if(bookReservation!=null && bookReservation.getMember_id()!=this.getId()) {
+            System.out.println(bookItem.getTitle()+" is reserved by someone else");
+            return false;
+        }
+        else if(bookReservation!=null){
             bookReservation.updateStatus(ReservationStatus.COMPLETED);
         }
         this.incrementBooksCount();
+        System.out.println(bookItem.getTitle()+" Checked Out by "+this.getPerson().getName());
         return true;
     }
 
-    public boolean renewBook(BookItem bookItem){
+    public void renewBook(BookItem bookItem){
         this.checkForFine(bookItem.getBarcode());
         BookReservation bookReservation = BookReservation.fetchReservationDetails(bookItem.getBarcode());
+        Member member = Member.fetchMemberDetails(bookReservation.getMember_id());
         if(bookReservation!=null && bookReservation.getMember_id()!=this.getId()){
             System.out.println("Book is reserved by other member");
             this.decrementBooksCount();
             bookItem.updateBookItemState(BookStatus.RESERVED);
-            bookReservation.sendNotification("Book is available");
-            return false;
+            bookReservation.sendNotification("Book is available to "+member.getPerson().getName());
         }
         else if(bookReservation!=null){
             bookReservation.updateStatus(ReservationStatus.COMPLETED);
         }
         BookLending.lendBook(bookItem.getBarcode(),this.getId());
         bookItem.updateDueDate(new java.sql.Date(System.currentTimeMillis()));
-        return true;
+        System.out.println(bookItem.getTitle()+" Renewed by "+this.getPerson().getName());
     }
 
     private void checkForFine(String barcode) {
@@ -78,15 +87,27 @@ public class Member extends Account{
     public void returnBook(BookItem bookItem){
         this.decrementBooksCount();
         BookReservation bookReservation = BookReservation.fetchReservationDetails(bookItem.getBarcode());
+        Member member = Member.fetchMemberDetails(bookReservation.getMember_id());
         if(bookReservation!=null){
             bookItem.updateBookItemState(BookStatus.RESERVED);
-            bookReservation.sendNotification("Book is Available");
+            bookReservation.sendNotification("Book is available to "+member.getPerson().getName());
         }
         bookItem.updateBookItemState(BookStatus.AVAILABLE);
+        System.out.println(bookItem.getTitle()+" returned by "+this.getPerson().getName());
     }
 
     public void reserveBookItem(BookItem bookItem){
-        BookReservation bookReservation = new BookReservation(new java.sql.Date(System.currentTimeMillis()), ReservationStatus.COMPLETED);
+        BookReservation bookReservation = new BookReservation(bookItem.getBarcode(),this.getId(),new java.sql.Date(System.currentTimeMillis()), ReservationStatus.COMPLETED);
+        System.out.println(bookItem.getTitle()+" reserved by "+this.getPerson().getName());
+    }
+
+    public static Member fetchMemberDetails(int id){
+        for (Member member : members) {
+            if (member.getId()==id) {
+                return member; // Return the matching reservation
+            }
+        }
+        return null;
     }
 
     public int getTotalBooks() {

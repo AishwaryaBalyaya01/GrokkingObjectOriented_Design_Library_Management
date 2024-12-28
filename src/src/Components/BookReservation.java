@@ -15,7 +15,9 @@ public class BookReservation {
     private int member_id;
     private static List<BookReservation> reservations = new ArrayList<>();
 
-    public BookReservation(Date reservationDate, ReservationStatus reservationStatus) {
+    public BookReservation(String barcode, int member_id, Date reservationDate, ReservationStatus reservationStatus) {
+        this.barcode = barcode;
+        this.member_id = member_id;
         this.reservationDate = reservationDate;
         this.reservationStatus = reservationStatus;
         BookReservation.reservations.add(this);
