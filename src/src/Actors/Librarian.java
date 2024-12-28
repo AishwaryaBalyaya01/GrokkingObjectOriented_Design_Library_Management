@@ -8,7 +8,7 @@ public class Librarian extends Account{
         super(id, password, status, person);
     }
     public void add_book(BookItem bookItem){
-        System.out.println("Book "+bookItem+" added");
+        System.out.println("Book "+bookItem.getTitle()+" added");
     }
     public void blockMember(Member member){
         System.out.println("Member "+member.getPerson().getName()+ " blocked");

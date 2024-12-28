@@ -51,14 +51,15 @@ public class Member extends Account{
         }
         this.incrementBooksCount();
         System.out.println(bookItem.getTitle()+" Checked Out by "+this.getPerson().getName());
+        BookLending bookLending = new BookLending(new java.sql.Date(System.currentTimeMillis()), new java.sql.Date(System.currentTimeMillis()),new java.sql.Date(System.currentTimeMillis()), bookItem.getBarcode(), this.getId());
         return true;
     }
 
     public void renewBook(BookItem bookItem){
         this.checkForFine(bookItem.getBarcode());
         BookReservation bookReservation = BookReservation.fetchReservationDetails(bookItem.getBarcode());
-        Member member = Member.fetchMemberDetails(bookReservation.getMember_id());
         if(bookReservation!=null && bookReservation.getMember_id()!=this.getId()){
+            Member member = Member.fetchMemberDetails(bookReservation.getMember_id());
             System.out.println("Book is reserved by other member");
             this.decrementBooksCount();
             bookItem.updateBookItemState(BookStatus.RESERVED);
